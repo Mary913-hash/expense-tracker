@@ -4,33 +4,72 @@ from sqlalchemy.orm import sessionmaker
 from models.user import User, Base
 from models.category import Category
 from models.expense import Expense
+from models.login import Login
+from base import Base  # Shared Base for all models
 
 # Set up the database engine and session
 engine = create_engine('sqlite:///expense_tracker.db')
-Base.metadata.create_all(engine)  # Create tables
+Base.metadata.create_all(engine)  # Create tables if they don't exist
 Session = sessionmaker(bind=engine)
 session = Session()
 
-def main_menu():
-    print("===== Personal Expense Tracker =====")
-    print("1. Manage Users")
-    print("2. Manage Categories")
-    print("3. Manage Expenses")
-    print("4. Exit")
+# Global variable to keep track of the logged-in user
+logged_in_user = None
 
-    choice = input("Enter your choice: ")
+# Function to handle user login
+def login_menu():
+    global logged_in_user
+    print("\n===== Login =====")
+    username = input("Enter username: ")
+    password = input("Enter password: ")
 
-    if choice == '1':
-        user_menu()
-    elif choice == '2':
-        category_menu()
-    elif choice == '3':
-        expense_menu()
-    elif choice == '4':
-        sys.exit()
+    user = session.query(Login).filter_by(username=username, password=password).first()
+    if user:
+        logged_in_user = user
+        print(f"Welcome back, {username}!")
+        user_dashboard()
     else:
-        print("Invalid choice. Try again.")
-        main_menu()
+        print("Invalid username or password. Please try again.")
+
+# Function to handle user registration
+def register_menu():
+    print("\n===== Register =====")
+    username = input("Enter username: ")
+    password = input("Enter password: ")
+
+    existing_user = session.query(Login).filter_by(username=username).first()
+    if existing_user:
+        print("Username already exists. Please choose a different username.")
+    else:
+        new_user = Login(username=username, password=password)
+        session.add(new_user)
+        session.commit()
+        print("Registration successful! You can now log in.")
+
+# Function for the user's dashboard
+def user_dashboard():
+    while True:
+        print("\n===== Personal Expense Tracker =====")
+        print("1. Manage Users")
+        print("2. Manage Categories")
+        print("3. Manage Expenses")
+        print("4. Logout")
+
+        choice = input("Enter your choice: ")
+
+        if choice == '1':
+            user_menu()  # Directing to user management menu
+        elif choice == '2':
+            category_menu()  # Directing to category management menu
+        elif choice == '3':
+            expense_menu()  # Directing to expense management menu
+        elif choice == '4':
+            print("Logging out...")
+            global logged_in_user
+            logged_in_user = None
+            break  # Exit the dashboard and go back to the main menu
+        else:
+            print("Invalid choice. Please try again.")
 
 # === User CRUD ===
 def user_menu():
@@ -39,7 +78,7 @@ def user_menu():
     print("2. View All Users")
     print("3. Update User")
     print("4. Delete User")
-    print("5. Back to Main Menu")
+    print("5. Back to Dashboard")
     
     choice = input("Enter your choice: ")
 
@@ -52,7 +91,7 @@ def user_menu():
     elif choice == '4':
         delete_user()
     elif choice == '5':
-        main_menu()
+        user_dashboard()  # Go back to the dashboard
     else:
         print("Invalid choice. Try again.")
         user_menu()
@@ -96,7 +135,7 @@ def category_menu():
     print("2. View All Categories")
     print("3. Update Category")
     print("4. Delete Category")
-    print("5. Back to Main Menu")
+    print("5. Back to Dashboard")
     
     choice = input("Enter your choice: ")
 
@@ -109,7 +148,7 @@ def category_menu():
     elif choice == '4':
         delete_category()
     elif choice == '5':
-        main_menu()
+        user_dashboard()  # Go back to the dashboard
     else:
         print("Invalid choice. Try again.")
         category_menu()
@@ -153,7 +192,7 @@ def expense_menu():
     print("2. View All Expenses")
     print("3. Update Expense")
     print("4. Delete Expense")
-    print("5. Back to Main Menu")
+    print("5. Back to Dashboard")
     
     choice = input("Enter your choice: ")
 
@@ -166,7 +205,7 @@ def expense_menu():
     elif choice == '4':
         delete_expense()
     elif choice == '5':
-        main_menu()
+        user_dashboard()  # Go back to the dashboard
     else:
         print("Invalid choice. Try again.")
         expense_menu()
@@ -220,5 +259,26 @@ def delete_expense():
     else:
         print("Expense not found.")
 
+# Function to handle the main menu (Login/Registration)
+def main_menu():
+    while True:
+        print("\n===== Personal Expense Tracker =====")
+        print("1. Login")
+        print("2. Register")
+        print("3. Exit")
+
+        choice = input("Enter your choice: ")
+
+        if choice == '1':
+            login_menu()
+        elif choice == '2':
+            register_menu()
+        elif choice == '3':
+            print("Exiting... Goodbye!")
+            sys.exit()
+        else:
+            print("Invalid choice. Please try again.")
+
+# Call the main menu
 if __name__ == "__main__":
     main_menu()
